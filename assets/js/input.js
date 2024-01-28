@@ -1,195 +1,42 @@
 (function($) {
+    // Função para inicializar o campo personalizado
     function initialize_field($el) {
-        if (!$el.length) {
-            return;
-        }
-        
-        var $countries      = $el.find('[data-select="countries"]');
-        var $states         = $el.find('[data-select="states"]');
-        var $stateInput     = $el.find('.state-input');
-        var $customStateChk = $el.find('.custom-state-toggler');
-        var $cities         = $el.find('[data-select="cities"]');
-        var $cityInput      = $el.find('.city-input');
-        var $customCityChk  = $el.find('.custom-city-toggler');
+        // Seletor para o campo de estados e cidades
+        var $states = $el.find('[data-select="states"]');
+        var $cities = $el.find('[data-select="cities"]');
 
-        var currentCountry  = $countries.val();
-        var currentState    = $states.data('value');
-
-        var statesHtml      = $states.html();
-        var citiesHtml      = $cities.html();
-
-        /**
-         * Populate states on load
-         */
-        $.ajax({
-            url: 'http://api.londrinaweb.com.br/PUC/Estados/'+ currentCountry +'/0/10000',
-            dataType: 'jsonp'
-        }).done(function(data) {
-            if (data.length > 0) {
-                $states.html(statesHtml);
-
-                data.forEach(function(state) {
-                    var selectedState = ($states.data('value') === state.UF) ? 'selected' : '';
-
-                    $states.append('<option value="'+ state.UF +'" '+ selectedState +'>'+ state.Estado +'</option>');
-                });
-            }
-        });
-
-        /**
-         * Populate cities on load
-         */
-        if (currentState) {
-            $.ajax({
-                url: 'http://api.londrinaweb.com.br/PUC/Cidades/'+ currentState +'/'+ currentCountry +'/0/1000',
-                dataType: 'jsonp'
-            }).done(function(data) {
-                if (data.length > 0) {
-                    $cities.html(citiesHtml);
-
-                    data.forEach(function(city) {
-                        var selectedCity = ($cities.data('value') === city) ? 'selected' : '';
-
-                        $cities.append('<option value="'+ city +'" '+ selectedCity +'>'+ city +'</option>');
-                    });
-                }
-            });
-        }
-
-        /**
-         * Populate states on country change
-         */
-        $countries.on('change', function(e) {
-            var country = $(this).val();
-
-            if (country === 'BR') {
-                if ($customStateChk.is(':checked')) {
-                    $customStateChk.click();
-                }
-
-                if ($customCityChk.is(':checked')) {
-                    $customCityChk.click();
-                }
-
-                $.ajax({
-                    url: 'http://api.londrinaweb.com.br/PUC/Estados/'+ country +'/0/10000',
-                    dataType: 'jsonp'
-                }).done(function(data) {
-                    if (data.length > 0) {
-                        $states.html(statesHtml);
-
-                        data.forEach(function(state) {
-                            $states.append('<option value="'+ state.UF +'">'+ state.Estado +'</option>');
-                        });
-                    }
-                });
-            } else {
-                if (!$customStateChk.is(':checked')) {
-                    $customStateChk.click();
-                }
-
-                if (!$customCityChk.is(':checked')) {
-                    $customCityChk.click();
-                }
-            }
-        });
-
-        /**
-         * Toggles the text input for the state when the user can't find it in the select
-         */
-        $customStateChk.on('click', function(e) {
-            if ($customStateChk[0].checked) {
-                $stateInput.show();
-                $stateInput.attr('name', $states.attr('name'));
-
-                $states.hide();
-            } else {
-                $stateInput.hide();
-                $stateInput.removeAttr('name');
-
-                $states.show();
-            }
-        });
-
-        /**
-         * Populate cities on state change
-         */
-        $states.on('change', function(e) {
-            var country = $countries.val();
-            var state   = $(this).val();
-
-            $.ajax({
-                url: 'http://api.londrinaweb.com.br/PUC/Cidades/'+ state +'/'+ country +'/0/1000',
-                dataType: 'jsonp'
-            }).done(function(data) {
-                if (data.length > 0) {
-                    $cities.html(citiesHtml);
-
-                    data.forEach(function(city) {
-                        $cities.append('<option value="'+ city +'">'+ city +'</option>');
-                    });
-                }
+        // Carregar estados do JSON
+        $.getJSON('/wp-content/plugins/acf-cities-master/data/estados-cidades.json', function(data) {
+            $states.empty().append('<option value="">Selecione um Estado</option>');
+            data.estados.forEach(function(estado) {
+                $states.append('<option value="' + estado.sigla + '">' + estado.nome + '</option>');
             });
         });
 
-        /**
-         * Toggles the text input for the city when the user can't find it in the select
-         */
-        $customCityChk.on('click', function(e) {
-            if ($customCityChk[0].checked) {
-                $cityInput.show();
-                $cityInput.attr('name', $cities.attr('name'));
+        // Evento de mudança para carregar as cidades baseadas no estado selecionado
+        $states.on('change', function() {
+            var estadoSelecionado = $(this).val();
 
-                $cities.hide();
-            } else {
-                $cityInput.hide();
-                $cityInput.removeAttr('name');
+            // Carregar as cidades correspondentes ao estado selecionado
+            $.getJSON('/wp-content/plugins/acf-cities-master/data/estados-cidades.json', function(data) {
+                var cidades = data.estados.find(function(estado) {
+                    return estado.sigla === estadoSelecionado;
+                }).cidades;
 
-                $cities.show();
-            }
-        });
-    }
-    
-    if (typeof acf.add_action !== 'undefined') {
-        /*
-        *  ready append (ACF5)
-        *
-        *  These are 2 events which are fired during the page load
-        *  ready = on page load similar to $(document).ready()
-        *  append = on new DOM elements appended via repeater field
-        *
-        *  @type    event
-        *  @date    20/07/13
-        *
-        *  @param   $el (jQuery selection) the jQuery element which contains the ACF fields
-        *  @return  n/a
-        */
-        
-        acf.add_action('ready append', function($el) {
-            var field = acf.get_field({ type : 'cities' }, $el);
-            
-            initialize_field(field);
-        });
-    } else {
-        /*
-        *  acf/setup_fields (ACF4)
-        *
-        *  This event is triggered when ACF adds any new elements to the DOM. 
-        *
-        *  @type    function
-        *  @since   1.0.0
-        *  @date    01/01/12
-        *
-        *  @param   event       e: an event object. This can be ignored
-        *  @param   Element     postbox: An element which contains the new HTML
-        *
-        *  @return  n/a
-        */
-        
-        $(document).on('acf/setup_fields', function(e, postbox) {
-            $(postbox).find('.field[data-field_type="cities"]').each(function() {   
-                initialize_field($(this));
+                $cities.empty().append('<option value="">Selecione uma Cidade</option>');
+                cidades.forEach(function(cidade) {
+                    $cities.append('<option value="' + cidade + '">' + cidade + '</option>');
+                });
             });
         });
     }
+
+    // Ação do ACF para inicializar o campo
+    acf.add_action('ready append', function($el) {
+        // Inicializa o campo para cada elemento encontrado
+        acf.get_field({ type: 'cities' }, $el).each(function() {
+            initialize_field($(this));
+        });
+    });
+
 })(jQuery);
