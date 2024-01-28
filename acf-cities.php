@@ -2,8 +2,8 @@
 /*
 Plugin Name: Advanced Custom Fields: Estados e Cidades
 Description: Tipo de campo para o ACF com cidades e estados brasileiros
-Version: 1.0.0
-Author: Carlos Fernandes Cunha
+Version: 1.2.0
+Author: Carlos Fernandes Cunha, Diogenes Junior & Fabrica de Plugins
 Author URI: https://carlosfernand.es
 */
 
